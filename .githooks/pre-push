@@ -1,0 +1,137 @@
+#!/bin/bash
+# pre-push: 6-panel expert review gate before every push.
+# Panel: Daniel (code) → Dev/Architect (FAANG) → Kaveri (buyer) → Sujit (GTM) → Anand (VC) → Priya (QA)
+set -e
+
+BRANCH="$(git branch --show-current)"
+[[ "$BRANCH" == "master" || "$BRANCH" == "main" ]] && exit 0
+[[ "${ALLOW_BRANCHLESS_PUSH:-}" == "1" ]] && exit 0
+
+# Gate 1 — open PR required
+if command -v gh >/dev/null 2>&1; then
+  OPEN="$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || true)"
+  if [[ -z "$OPEN" ]]; then
+    echo "❌ BLOCK: no open PR for '$BRANCH'."
+    echo "   Either: gh pr create --fill  OR  ALLOW_BRANCHLESS_PUSH=1 git push"
+    exit 1
+  fi
+fi
+
+# Gate 2 — 6-panel expert review
+if ! command -v claude >/dev/null 2>&1; then
+  echo "⚠ claude CLI not found — skipping expert review gates."
+  exit 0
+fi
+
+DIFF="$(git diff origin/"$BRANCH"..."$BRANCH" 2>/dev/null || git diff HEAD~1..HEAD 2>/dev/null || true)"
+if [[ -z "$DIFF" ]]; then
+  echo "⚠ No diff found — skipping expert review."
+  exit 0
+fi
+
+AGENTS_DIR="$HOME/.claude/agents"
+run_review() {
+  local name="$1"; local prompt="$2"
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "🔍 $name"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  claude -p "$prompt" 2>/dev/null || echo "ERROR: claude CLI failed for $name"
+}
+
+# ── Panel 1: Daniel — Code Quality ────────────────────────────
+DANIEL="$(cat "$AGENTS_DIR/daniel.md" 2>/dev/null || echo '')"
+DANIEL_REVIEW="$(run_review "Daniel · Code Review" "${DANIEL}
+
+Review this git diff:
+\`\`\`diff
+${DIFF}
+\`\`\`")"
+echo "$DANIEL_REVIEW"
+echo "$DANIEL_REVIEW" | grep -q "Verdict: BLOCK" && { echo "❌ BLOCKED by Daniel."; exit 1; }
+
+# ── Panel 2: Dev — Architecture (FAANG lens) ──────────────────
+DEV="$(cat "$AGENTS_DIR/dev.md" 2>/dev/null || echo '')"
+DEV_REVIEW="$(run_review "Dev · Architect / FAANG Senior Engineer" "${DEV}
+
+Review this git diff for system design, scalability, and architecture quality:
+\`\`\`diff
+${DIFF}
+\`\`\`")"
+echo "$DEV_REVIEW"
+echo "$DEV_REVIEW" | grep -q "Verdict: REDESIGN REQUIRED" && { echo "❌ BLOCKED by Dev (Architect)."; exit 1; }
+
+# ── Panel 3: Kaveri — Buyer Necessity Check ───────────────────
+KAVERI="$(cat "$AGENTS_DIR/kaveri.md" 2>/dev/null || echo '')"
+KAVERI_REVIEW="$(run_review "Kaveri · RV College Chairman (Buyer)" "${KAVERI}
+
+A developer just pushed this feature to a college AI ERP. As the Chairman of RV College, evaluate:
+1. Is this feature necessary for a college like ours?
+2. Does it solve a real pain point or is it engineering for its own sake?
+3. Would this feature make you MORE or LESS likely to buy the product?
+
+Git diff:
+\`\`\`diff
+${DIFF}
+\`\`\`
+
+End with verdict: FEATURE NEEDED | FEATURE OPTIONAL | FEATURE UNNECESSARY")"
+echo "$KAVERI_REVIEW"
+
+# ── Panel 4: Sujit — GTM / ERP Strategy ──────────────────────
+SUJIT="$(cat "$AGENTS_DIR/sujit.md" 2>/dev/null || echo '')"
+SUJIT_REVIEW="$(run_review "Sujit · McKinsey ERP Consultant" "${SUJIT}
+
+A developer just pushed this feature to a college AI ERP. Evaluate:
+1. Is this feature strategically valuable for ERP sales in Indian higher education?
+2. Does it move the needle on NAAC, NEP 2020, or placement outcomes — the things colleges actually pay for?
+3. Is the development effort justified by the GTM impact?
+
+Git diff:
+\`\`\`diff
+${DIFF}
+\`\`\`
+
+End with verdict: HIGH GTM VALUE | LOW GTM VALUE | DISTRACTION")"
+echo "$SUJIT_REVIEW"
+
+# ── Panel 5: Anand — VC Metrics Impact ───────────────────────
+ANAND="$(cat "$AGENTS_DIR/anand.md" 2>/dev/null || echo '')"
+ANAND_REVIEW="$(run_review "Anand · VC Investor" "${ANAND}
+
+A developer just shipped this feature to a college AI ERP. Evaluate:
+1. Does this feature improve any fundable metric (ARR, NRR, churn, ACV, moat)?
+2. Is this the highest-leverage thing the team could have built right now?
+3. Does it bring the product closer to or further from your investment bar?
+
+Git diff:
+\`\`\`diff
+${DIFF}
+\`\`\`
+
+End with verdict: MOVES NEEDLE | NEUTRAL | WRONG PRIORITY")"
+echo "$ANAND_REVIEW"
+
+# ── Panel 6: Priya — QA / Test Coverage ──────────────────────
+QA="$(cat "$AGENTS_DIR/qa.md" 2>/dev/null || echo '')"
+QA_REVIEW="$(run_review "Priya · QA Lead (SAP/ERP Testing)" "${QA}
+
+Review this git diff for test coverage and quality:
+1. Are there unit tests for every new function and branch?
+2. Are integration tests present for any DB, API, or file I/O changes?
+3. Are ERP-specific edge cases covered (fee, attendance, marks, NAAC)?
+4. Are any tests weak or mocked in ways that hide real failures?
+
+Git diff:
+\`\`\`diff
+${DIFF}
+\`\`\`")"
+echo "$QA_REVIEW"
+echo "$QA_REVIEW" | grep -q "Verdict: FIX TESTS FIRST" && { echo "❌ BLOCKED by Priya — add missing tests before pushing."; exit 1; }
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ All 6 expert panels reviewed — push proceeding."
+echo "   Review panel feedback above before merging PR."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+exit 0

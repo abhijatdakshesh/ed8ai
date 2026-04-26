@@ -1,0 +1,16 @@
+#!/bin/bash
+# Gate 1 — refuse commits on a branch whose PR has already merged.
+set -e
+BRANCH="$(git branch --show-current)"
+[[ "$BRANCH" == "master" || "$BRANCH" == "main" ]] && exit 0
+
+if command -v gh >/dev/null 2>&1; then
+  MERGED="$(gh pr list --state merged --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || true)"
+  if [[ -n "$MERGED" ]]; then
+    echo "❌ BLOCK: branch '$BRANCH' has merged PR #$MERGED."
+    echo "   Branch off fresh master instead:"
+    echo "   git stash && git checkout master && git pull && git checkout -b <new-branch>"
+    exit 1
+  fi
+fi
+exit 0

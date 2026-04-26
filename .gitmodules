@@ -1,0 +1,6 @@
+[submodule "EdAI-Backend"]
+	path = EdAI-Backend
+	url = https://github.com/abhijatdakshesh/EdAI-Backend.git
+[submodule "EdAI-Frontend"]
+	path = EdAI-Frontend
+	url = https://github.com/abhijatdakshesh/EdAI-Frontend.git
