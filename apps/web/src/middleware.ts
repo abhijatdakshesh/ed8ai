@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 type Role =
   | "ADMIN" | "PRINCIPAL" | "DEAN" | "TRUSTEE"
   | "FACULTY" | "HOD" | "COUNSELLOR"
-  | "STUDENT" | "PARENT" | "RECRUITER";
+  | "STUDENT" | "PARENT" | "RECRUITER" | "APPLICANT";
 
 const ADMIN_ROLES: Role[] = ["ADMIN", "PRINCIPAL", "DEAN", "TRUSTEE", "HOD"];
 const TEACHER_ROLES: Role[] = ["FACULTY", "HOD", "COUNSELLOR"];
@@ -15,7 +15,8 @@ function rolePrefixAllowed(pathname: string, role: Role): boolean {
   if (pathname.startsWith("/student/")) return role === "STUDENT";
   if (pathname.startsWith("/parent/")) return role === "PARENT";
   if (pathname.startsWith("/recruiter/")) return role === "RECRUITER";
-  if (pathname === "/dashboard") return role !== "RECRUITER";
+  if (pathname.startsWith("/admit/")) return role === "APPLICANT" || ADMIN_ROLES.includes(role);
+  if (pathname === "/dashboard") return role !== "RECRUITER" && role !== "APPLICANT";
   return true;
 }
 
@@ -25,12 +26,13 @@ function homeForRole(role: Role): string {
   if (role === "STUDENT") return "/student/dashboard";
   if (role === "PARENT") return "/parent/dashboard";
   if (role === "RECRUITER") return "/recruiter/dashboard";
+  if (role === "APPLICANT") return "/admit/dashboard";
   return "/dashboard";
 }
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
-  const publicPaths = ["/", "/login"];
+  const publicPaths = ["/", "/login", "/admit/apply", "/admit/register"];
   const isPublic = publicPaths.includes(pathname) || pathname.startsWith("/api/auth") || pathname.startsWith("/verify/");
   if (isPublic) return NextResponse.next();
 

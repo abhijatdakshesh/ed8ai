@@ -16,6 +16,7 @@ const DEV_ACCOUNTS = [
   { email: "hod@rvce.edu", password: "Hod@123", role: "HoD" },
   { email: "principal@rvce.edu", password: "Principal@123", role: "Principal" },
   { email: "recruiter@demo.com", password: "Recruiter@123", role: "Recruiter" },
+  { email: "applicant@demo.com", password: "Applicant@123", role: "Applicant" },
 ] as const;
 
 export default function LoginPage() {

@@ -62,6 +62,7 @@ const DEV_CREDENTIALS: Record<
   "hod@rvce.edu": { password: "Hod@123", role: "HOD", name: "Head of Department" },
   "principal@rvce.edu": { password: "Principal@123", role: "PRINCIPAL", name: "Principal" },
   "recruiter@demo.com": { password: "Recruiter@123", role: "RECRUITER", name: "Recruiter" },
+  "applicant@demo.com": { password: "Applicant@123", role: "APPLICANT", name: "Applicant" },
 };
 
 const DEV_JWT_SECRET = new TextEncoder().encode(
