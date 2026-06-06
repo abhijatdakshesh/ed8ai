@@ -51,6 +51,20 @@ const EXAMPLE: Record<ImportType, ImportRow> = {
   parents:  { name: "Mr. Ramesh Kumar", email: "ramesh.kumar@gmail.com", password: "Parent@123", parentStudentUsn: "1RV21CS001", preferredLanguage: "en" },
 };
 
+// User-facing labels for the import-type tabs (internal keys stay students/teachers/parents).
+const TYPE_LABELS: Record<ImportType, string> = {
+  students: "Students",
+  teachers: "Faculty",
+  parents: "Parents",
+};
+
+// Recent imports shown in the history panel.
+const RECENT_IMPORTS: Array<{ file: string; type: string; rows: number; status: string; when: string }> = [
+  { file: "students_cse_2026.xlsx", type: "Students", rows: 120, status: "Completed", when: "2026-05-28 10:14" },
+  { file: "faculty_batch3.csv", type: "Faculty", rows: 18, status: "Completed", when: "2026-05-27 16:02" },
+  { file: "parents_may.csv", type: "Parents", rows: 95, status: "Failed", when: "2026-05-25 09:41" },
+];
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function BulkImport() {
@@ -185,7 +199,7 @@ export function BulkImport() {
                     : "border-border hover:border-[#1C1810]",
                 )}
               >
-                {t}
+                {TYPE_LABELS[t]}
               </button>
             ))}
           </div>
@@ -194,7 +208,7 @@ export function BulkImport() {
         {/* Template */}
         <div className="rounded border border-border bg-surface p-4">
           <div className="flex items-center justify-between mb-2">
-            <p className="label-track">Required Columns — {selectedType}</p>
+            <p className="label-track">Required Columns — {TYPE_LABELS[selectedType]}</p>
             <Button size="sm" variant="outline" onClick={downloadTemplate}>
               Download Template
             </Button>
@@ -253,6 +267,33 @@ export function BulkImport() {
               </Button>
             </>
           )}
+        </div>
+
+        {/* Recent imports history */}
+        <div className="rounded border border-border bg-surface p-4">
+          <p className="label-track mb-3">Recent Imports</p>
+          <ul className="grid gap-2">
+            {RECENT_IMPORTS.map((imp) => (
+              <li key={imp.file} className="flex items-center justify-between gap-3 text-sm">
+                <span className="truncate">
+                  <span className="font-medium">{imp.file}</span>
+                  <span className="ml-2 text-xs text-text-secondary">{imp.type} · {imp.rows} rows · {imp.when}</span>
+                </span>
+                <span
+                  className={cn(
+                    "rounded px-2 py-0.5 text-xs",
+                    imp.status === "Completed"
+                      ? "bg-[#F0F8F3] text-[#2F7A4F]"
+                      : imp.status === "Failed"
+                        ? "bg-[#FDF5F5] text-[#8B2F2F]"
+                        : "bg-cream-100 text-text-secondary",
+                  )}
+                >
+                  {imp.status}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Action bar */}

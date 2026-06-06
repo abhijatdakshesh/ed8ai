@@ -38,6 +38,7 @@ const BFF_PREFIXES = [
   "/api/ia/teacher/marks",       // KAN-73 teacher marks save/submit synth
   "/api/fees/payment/initiate",  // KAN-78 fee payment initiate synth
   "/api/vtu/teacher/",           // VTU eligibility + submit synth
+  "/api/admissions",             // Admission portal: apply, mine, docs, fee, review, merit-list
 ];
 
 /**

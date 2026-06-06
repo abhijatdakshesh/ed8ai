@@ -23,6 +23,7 @@ export function portalLabel(role: UserRole): string {
     case "STUDENT":    return "Student Portal";
     case "PARENT":     return "Parent Portal";
     case "RECRUITER":  return "Recruiter Portal";
+    case "APPLICANT":  return "Admission Portal";
     default:
       return "Ed8AI";
   }
@@ -130,6 +131,16 @@ export const navItems: NavItem[] = [
 
   // ── ADMIN CHATBOT SESSIONS ────────────────────────────────────────────────
   { key: "admin-chatbot",     title: "Chat Sessions",           route: "/admin/chatbot",          allowedRoles: ["ADMIN","PRINCIPAL"],                            group: "Admin" },
+
+  // ── ADMISSION PORTAL (applicant) ──────────────────────────────────────────
+  { key: "adm-dashboard",     title: "Dashboard",               route: "/admit/dashboard",        allowedRoles: ["APPLICANT"],                                    group: "Admission" },
+  { key: "adm-apply",         title: "My Application",          route: "/admit/apply",            allowedRoles: ["APPLICANT"],                                    group: "Admission" },
+  { key: "adm-documents",     title: "My Documents",            route: "/admit/documents",        allowedRoles: ["APPLICANT"],                                    group: "Admission" },
+  { key: "adm-status",        title: "Application Status",      route: "/admit/status",           allowedRoles: ["APPLICANT"],                                    group: "Admission" },
+  { key: "adm-pay",           title: "Admission Fee",           route: "/admit/pay",              allowedRoles: ["APPLICANT"],                                    group: "Admission" },
+
+  // ── ADMISSIONS (admin review) ─────────────────────────────────────────────
+  { key: "admissions-admin",  title: "Admissions",              route: "/admin/admissions",       allowedRoles: ["ADMIN","PRINCIPAL","DEAN"],                     group: "Admin" },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

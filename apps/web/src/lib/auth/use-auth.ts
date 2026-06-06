@@ -21,6 +21,8 @@ export function homeRouteForRole(role: UserRole): string {
       return "/student/dashboard";
     case "PARENT":
       return "/parent/dashboard";
+    case "APPLICANT":
+      return "/admit/dashboard";
     default:
       return "/dashboard";
   }
