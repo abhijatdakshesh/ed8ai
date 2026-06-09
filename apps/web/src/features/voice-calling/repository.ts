@@ -75,6 +75,7 @@ export async function triggerCall(req: TriggerCallRequest): Promise<TriggerCallR
         studentUsn: req.studentId,
         type: req.callType,
         language: req.language ?? 'en',
+        parentPhone: req.parentPhone,
       },
     );
     return {
