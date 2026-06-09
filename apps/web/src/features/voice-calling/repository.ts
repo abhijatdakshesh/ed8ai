@@ -89,6 +89,16 @@ export async function triggerCall(req: TriggerCallRequest): Promise<TriggerCallR
   }
 }
 
+/**
+ * Record DPDP voice consent for a principal (admin-attested) before a call.
+ * The operator has confirmed the parent opted in; this persists that consent
+ * so the backend trigger gate passes. Deliberate, logged act — not a bypass.
+ */
+export async function grantVoiceConsent(usn: string): Promise<void> {
+  if (USE_MOCK) return;
+  await apiPost('/api/comms/consent/grant', { usn });
+}
+
 // GoVoiceCallStatus is the shape returned by the Go voice service
 interface GoVoiceCallStatus {
   callId: string;
