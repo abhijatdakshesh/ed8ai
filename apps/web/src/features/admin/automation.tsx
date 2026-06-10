@@ -286,6 +286,14 @@ export function AdminAICallLogs() {
                             outcomeStyle[log.outcome] ?? "bg-[#F0EEEB] text-[#6B6358]")}>
                             {log.outcome.replace("_", " ")}
                           </span>
+                          {log.transferStatus && (
+                            <span className={cn("ml-1 rounded px-2 py-0.5 text-xs font-medium",
+                              log.transferStatus === "CONNECTED" ? "bg-[#EBF3EE] text-[#3D6B4F]"
+                                : log.transferStatus === "FAILED" ? "bg-[#F5E6E6] text-[#8B2F2F]"
+                                : "bg-[#F5EDDB] text-[#8B6914]")}>
+                              ↗ Transferred
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-2">
                           {log.transcript && (
@@ -325,6 +333,23 @@ export function AdminAICallLogs() {
                     </span>
                   </dd>
                 </div>
+                {selected.transferStatus && (
+                  <div>
+                    <dt className="label-track text-xs">Human Transfer</dt>
+                    <dd className="text-sm">
+                      <span className={cn("rounded px-2 py-0.5 text-xs font-medium",
+                        selected.transferStatus === "CONNECTED" ? "bg-[#EBF3EE] text-[#3D6B4F]"
+                          : selected.transferStatus === "FAILED" ? "bg-[#F5E6E6] text-[#8B2F2F]"
+                          : "bg-[#F5EDDB] text-[#8B6914]")}>
+                        {selected.transferStatus}
+                      </span>
+                      {selected.transferReason && <span className="ml-2 text-text-muted">{selected.transferReason}</span>}
+                      {typeof selected.transferDuration === "number" && selected.transferDuration > 0 && (
+                        <span className="ml-2 text-text-muted">· {selected.transferDuration}s with agent</span>
+                      )}
+                    </dd>
+                  </div>
+                )}
                 {selected.transcript && (
                   <div>
                     <dt className="label-track text-xs mb-1">Transcript</dt>
