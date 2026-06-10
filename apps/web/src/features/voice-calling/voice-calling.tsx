@@ -57,7 +57,7 @@ function CallTypeBadge({ type }: { type: string }) {
 function TriggerCallTab() {
   const [studentId, setStudentId] = useState('');
   const [parentPhone, setParentPhone] = useState('');
-  const [callType, setCallType] = useState<CallType>('ABSENT_CALL');
+  const [callType, setCallType] = useState<CallType>('ADMISSION_OUTREACH');
   const [language, setLanguage] = useState<Language>('kn');
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -146,6 +146,7 @@ function TriggerCallTab() {
             onChange={(e) => { setCallType(e.target.value as CallType); }}
             className="w-full rounded border border-border bg-surface px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-text-primary"
           >
+            <option value="ADMISSION_OUTREACH">Admission Outreach (SBIT)</option>
             <option value="ABSENT_CALL">Absent Call</option>
             <option value="FEE_REMINDER">Fee Reminder</option>
             <option value="WEEKLY_UPDATE">Weekly Update</option>
@@ -275,6 +276,7 @@ function CallLogsTab() {
             onChange={(e) => { updateFilter('callType', e.target.value); }}
           >
             <option value="">All Types</option>
+            <option value="ADMISSION_OUTREACH">Admission Outreach (SBIT)</option>
             <option value="ABSENT_CALL">Absent Call</option>
             <option value="FEE_REMINDER">Fee Reminder</option>
             <option value="WEEKLY_UPDATE">Weekly Update</option>
