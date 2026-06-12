@@ -105,6 +105,7 @@ export const navItems: NavItem[] = [
   { key: "stu-chatbot",       title: "Ask Ed8AI",                route: "/student/chatbot",        allowedRoles: ["STUDENT"],                                      group: "Student" },
   { key: "stu-hr",            title: "HR & Staff",              route: "/student/hr",             allowedRoles: ["STUDENT"],                                      group: "Student" },
   { key: "stu-study-plan",    title: "Study Plan",              route: "/student/study-plan",     allowedRoles: ["STUDENT"],                                      group: "Student" },
+  { key: "stu-revision",      title: "Revision Plan",           route: "/student/revision",       allowedRoles: ["STUDENT"],                                      group: "Student" },
   { key: "stu-exam-prep",     title: "Exam Prep & Wellness",    route: "/student/exam-prep",      allowedRoles: ["STUDENT"],                                      group: "Student" },
   { key: "stu-counselor",     title: "Book Counselor",          route: "/student/counselor",      allowedRoles: ["STUDENT"],                                      group: "Student" },
   { key: "stu-documents",     title: "Documents",               route: "/student/documents",      allowedRoles: ["STUDENT"],                                      group: "Student" },
