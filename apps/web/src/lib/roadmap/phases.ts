@@ -75,6 +75,7 @@ export const navItems: NavItem[] = [
   { key: "my-classes",        title: "My Classes",              route: "/teacher/classes",        allowedRoles: ["FACULTY","HOD"],                                group: "Teacher" },
   { key: "teacher-assign",    title: "Assignments",             route: "/teacher/assignments",    allowedRoles: ["FACULTY","HOD"],                                group: "Teacher" },
   { key: "assign-intel",      title: "Assignment Intelligence", route: "/teacher/assign-intel",   allowedRoles: ["FACULTY","HOD"],                                group: "Teacher" },
+  { key: "integrity-check",   title: "Integrity Check",         route: "/teacher/integrity",      allowedRoles: ["FACULTY","HOD"],                                group: "Teacher" },
   { key: "attend-summary",    title: "Attendance Summary",      route: "/teacher/attend-summary", allowedRoles: ["FACULTY","HOD","COUNSELLOR"],                   group: "Teacher" },
   { key: "upload-results",    title: "Upload Results",          route: "/teacher/upload-results", allowedRoles: ["FACULTY","HOD"],                                group: "Teacher" },
   { key: "marks-entry",       title: "Marks Entry",             route: "/teacher/marks-entry",    allowedRoles: ["FACULTY","HOD"],                                group: "Teacher" },
