@@ -109,6 +109,7 @@ export const navItems: NavItem[] = [
   { key: "stu-revision",      title: "Revision Plan",           route: "/student/revision",       allowedRoles: ["STUDENT"],                                      group: "Student" },
   { key: "stu-achievements",  title: "Achievements",            route: "/student/achievements",   allowedRoles: ["STUDENT"],                                      group: "Student" },
   { key: "stu-forum",         title: "Discussion Forum",        route: "/student/forum",          allowedRoles: ["STUDENT"],                                      group: "Student" },
+  { key: "stu-exam",          title: "Proctored Exam",          route: "/student/exam",           allowedRoles: ["STUDENT"],                                      group: "Student" },
   { key: "stu-exam-prep",     title: "Exam Prep & Wellness",    route: "/student/exam-prep",      allowedRoles: ["STUDENT"],                                      group: "Student" },
   { key: "stu-counselor",     title: "Book Counselor",          route: "/student/counselor",      allowedRoles: ["STUDENT"],                                      group: "Student" },
   { key: "stu-documents",     title: "Documents",               route: "/student/documents",      allowedRoles: ["STUDENT"],                                      group: "Student" },
