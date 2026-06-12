@@ -132,6 +132,10 @@ export const navItems: NavItem[] = [
   // ── ADMIN CHATBOT SESSIONS ────────────────────────────────────────────────
   { key: "admin-chatbot",     title: "Chat Sessions",           route: "/admin/chatbot",          allowedRoles: ["ADMIN","PRINCIPAL"],                            group: "Admin" },
 
+  // ── OBE / CO-PO ATTAINMENT ─────────────────────────────────────────────────
+  { key: "obe-attainment",    title: "OBE / CO-PO Attainment",  route: "/admin/obe",              allowedRoles: ["ADMIN","PRINCIPAL","DEAN","HOD"],               group: "Admin" },
+  { key: "obe-course",        title: "CO-PO Mapping",           route: "/teacher/obe/CS501",      allowedRoles: ["FACULTY","HOD"],                                group: "Teacher" },
+
   // ── ADMISSION PORTAL (applicant) ──────────────────────────────────────────
   { key: "adm-dashboard",     title: "Dashboard",               route: "/admit/dashboard",        allowedRoles: ["APPLICANT"],                                    group: "Admission" },
   { key: "adm-apply",         title: "My Application",          route: "/admit/apply",            allowedRoles: ["APPLICANT"],                                    group: "Admission" },
