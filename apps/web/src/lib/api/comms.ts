@@ -33,6 +33,11 @@ export interface AiCallLog {
   transcript?: string | undefined;
   summary?: string | undefined;
   language: string;
+  // Live-agent handoff (AI→human transfer)
+  transferStatus?: "PENDING" | "CONNECTED" | "FAILED" | undefined;
+  transferReason?: string | undefined;
+  transferredAt?: string | undefined;
+  transferDuration?: number | undefined;
 }
 
 export interface SendSmsPayload {

@@ -30,11 +30,14 @@ export function ReportGeneratorPage() {
     setError(null);
     setLoading(true);
     try {
-      const blob = await generateReport(selectedType, params);
+      // Filename comes from the server's Content-Disposition. It used to be
+      // hardcoded to .zip while the backend emits .xlsx, so every download
+      // arrived as an archive macOS refused to open.
+      const { blob, filename } = await generateReport(selectedType, params);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${selectedType}-report.zip`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
       await loadHistory();
@@ -148,7 +151,8 @@ export function ReportGeneratorPage() {
               disabled={loading}
               className="px-5 py-2 bg-amber-700 hover:bg-amber-800 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
             >
-              {loading ? 'Generating…' : 'Generate & Download PDF'}
+              {/* The engine emits .xlsx, not PDF — the old label was wrong. */}
+              {loading ? 'Generating…' : 'Generate & Download Report'}
             </button>
           </div>
 
