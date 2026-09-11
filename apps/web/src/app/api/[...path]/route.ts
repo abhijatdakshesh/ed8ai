@@ -29,28 +29,44 @@ async function proxy(
     const backendUrl = `${upstream}${url.pathname}${url.search}`;
 
     const isWrite = method !== 'GET' && method !== 'HEAD';
+
+    // Forward the caller's Content-Type rather than asserting JSON.
+    //
+    // This used to hardcode 'application/json' on every write, which broke every
+    // multipart upload: the bulk-import file arrived as multipart bytes labelled
+    // JSON, and the backend failed with
+    //   Unexpected token '-', "----------"... is not valid JSON
+    // The boundary marker is the '-' it choked on.
+    const incomingContentType = req.headers.get('content-type');
     const headers: Record<string, string> = {
       Authorization: `Bearer ${accessToken}`,
-      ...(isWrite ? { 'Content-Type': 'application/json' } : {}),
+      ...(isWrite && incomingContentType ? { 'Content-Type': incomingContentType } : {}),
     };
 
-    const body = isWrite ? await req.text() : null;
+    // arrayBuffer, not text: req.text() decodes as UTF-8, which corrupts the
+    // binary payload inside a multipart body.
+    const body = isWrite ? await req.arrayBuffer() : null;
     const res = await fetch(backendUrl, { method, headers, body });
 
     const contentType = res.headers.get('content-type') ?? 'application/json';
-    if (contentType.includes('application/pdf')) {
-      const buf = await res.arrayBuffer();
-      return new NextResponse(buf, {
-        status: res.status,
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': res.headers.get('Content-Disposition') ?? 'attachment',
-        },
-      });
-    }
 
-    const data = await res.text();
-    return new NextResponse(data, { status: res.status, headers: { 'Content-Type': contentType } });
+    // Always forward the body as bytes.
+    //
+    // res.text() decodes as UTF-8, which silently corrupts any binary payload:
+    // the bulk-import .xlsx left the backend at 16280 bytes and reached the
+    // browser at 16388, the difference being replacement characters. The file
+    // downloaded and then failed to open, and re-uploading it failed too.
+    //
+    // Sniffing for "binary" content types is not worth it and is easy to get
+    // wrong — a content-type check for 'xml' matches
+    // application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, which
+    // is emphatically not text. arrayBuffer is byte-exact for JSON and HTML as
+    // well, so there is nothing to decide.
+    const buf = await res.arrayBuffer();
+    const passthrough: Record<string, string> = { 'Content-Type': contentType };
+    const disposition = res.headers.get('Content-Disposition');
+    if (disposition) passthrough['Content-Disposition'] = disposition;
+    return new NextResponse(buf, { status: res.status, headers: passthrough });
   } catch {
     return NextResponse.json({ error: 'Upstream error' }, { status: 502 });
   }

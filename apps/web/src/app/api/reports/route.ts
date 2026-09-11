@@ -21,12 +21,25 @@ export const POST = auth(async function POST(req) {
       return NextResponse.json({ error: err.message ?? `Report engine error ${res.status}` }, { status: res.status });
     }
 
-    const zip = await res.arrayBuffer();
-    return new NextResponse(zip, {
+    // Forward the report engine's own content type and filename.
+    //
+    // These were hardcoded to application/zip and "<type>-report.zip", but the
+    // engine emits .xlsx (Content-Type ...spreadsheetml.sheet). The browser
+    // saved a spreadsheet as .zip, macOS handed it to Archive Utility, and it
+    // failed with "unsupported format" — an xlsx is a zip container, but not
+    // one Archive Utility will expand. Mislabelling also means this breaks
+    // again the day the engine switches to PDF or CSV.
+    const payload = await res.arrayBuffer();
+    const safeType = body.reportType.replace(/[^a-zA-Z0-9_-]/g, '');
+    const upstreamType = res.headers.get('content-type');
+    const upstreamDisposition = res.headers.get('content-disposition');
+
+    return new NextResponse(payload, {
       status: 200,
       headers: {
-        'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="${body.reportType.replace(/[^a-zA-Z0-9_-]/g, '')}-report.zip"`,
+        'Content-Type': upstreamType ?? 'application/octet-stream',
+        'Content-Disposition':
+          upstreamDisposition ?? `attachment; filename="${safeType}-report"`,
       },
     });
   } catch (err) {

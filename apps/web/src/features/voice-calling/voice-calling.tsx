@@ -6,7 +6,7 @@ import { AppShell } from '@/components/layout/shell';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-import { getCallLogs, getCallStatus, triggerCall } from './repository';
+import { getCallLogs, getCallStatus, grantVoiceConsent, triggerCall } from './repository';
 import type { CallLogsFilters } from './repository';
 import type { CallRecord, CallState, CallType, Language, TriggerCallResult } from './types';
 import { TranscriptDrawer } from './transcript-drawer';
@@ -57,8 +57,9 @@ function CallTypeBadge({ type }: { type: string }) {
 function TriggerCallTab() {
   const [studentId, setStudentId] = useState('');
   const [parentPhone, setParentPhone] = useState('');
-  const [callType, setCallType] = useState<CallType>('ABSENT_CALL');
+  const [callType, setCallType] = useState<CallType>('ADMISSION_OUTREACH');
   const [language, setLanguage] = useState<Language>('kn');
+  const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<TriggerCallResult | null>(null);
@@ -91,11 +92,14 @@ function TriggerCallTab() {
     e.preventDefault();
     if (!studentId.trim()) { setError('Student USN is required'); return; }
     if (!parentPhone.trim()) { setError('Parent phone number is required'); return; }
+    if (!consent) { setError('DPDP: confirm the parent has consented to voice calls before triggering.'); return; }
     setError(null);
     setResult(null);
     setPolledCall(null);
     setLoading(true);
     try {
+      // Record the operator-attested DPDP consent before placing the call.
+      await grantVoiceConsent(studentId.trim());
       const res = await triggerCall({ studentId: studentId.trim(), parentPhone: parentPhone.trim(), callType, language, studentContext: { name: studentId.trim() } });
       setResult(res);
       // Mark this call as "live" so the transcript drawer shows the live pill.
@@ -142,6 +146,7 @@ function TriggerCallTab() {
             onChange={(e) => { setCallType(e.target.value as CallType); }}
             className="w-full rounded border border-border bg-surface px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-text-primary"
           >
+            <option value="ADMISSION_OUTREACH">Admission Outreach (SBIT)</option>
             <option value="ABSENT_CALL">Absent Call</option>
             <option value="FEE_REMINDER">Fee Reminder</option>
             <option value="WEEKLY_UPDATE">Weekly Update</option>
@@ -171,11 +176,24 @@ function TriggerCallTab() {
           </select>
         </div>
 
+        <label className="flex items-start gap-2 text-xs text-text-secondary">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => { setConsent(e.target.checked); }}
+            className="mt-0.5"
+          />
+          <span>
+            I confirm the parent/guardian has consented to receiving AI voice calls
+            (DPDP Act 2023). This consent is recorded for audit.
+          </span>
+        </label>
+
         {error && (
           <p className="rounded bg-[#F5E6E6] px-3 py-2 text-sm text-[#8B2F2F]">{error}</p>
         )}
 
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type="submit" disabled={loading || !consent} className="w-full">
           {loading ? (
             <span className="flex items-center gap-2">
               <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -258,6 +276,7 @@ function CallLogsTab() {
             onChange={(e) => { updateFilter('callType', e.target.value); }}
           >
             <option value="">All Types</option>
+            <option value="ADMISSION_OUTREACH">Admission Outreach (SBIT)</option>
             <option value="ABSENT_CALL">Absent Call</option>
             <option value="FEE_REMINDER">Fee Reminder</option>
             <option value="WEEKLY_UPDATE">Weekly Update</option>
