@@ -94,10 +94,12 @@ function fakeResponseMalformedJson(status: number): Response {
 // logic in isolation from NextAuth token handling.
 jest.mock('@/lib/api/client', () => ({
   apiGet: jest.fn(),
+  apiPost: jest.fn(),
 }));
 
-import { apiGet } from '@/lib/api/client';
+import { apiGet, apiPost } from '@/lib/api/client';
 const mockedApiGet = apiGet as jest.MockedFunction<typeof apiGet>;
+const mockedApiPost = apiPost as jest.MockedFunction<typeof apiPost>;
 
 // ─── Test suite — USE_MOCK = true (default env) ──────────────────────────────
 
@@ -201,8 +203,8 @@ describe('repository — USE_MOCK=false (NEXT_PUBLIC_USE_MOCKS=false)', () => {
   let triggerCall: (req: typeof BASE_REQUEST & { institutionId?: string; studentContext?: Record<string, unknown> }) => Promise<TriggerCallResult>;
   let getCallStatus: (id: string) => Promise<import('../types').CallRecord>;
   let getCallLogs: (f?: CallLogsFilters) => Promise<CallLogsResponse>;
-  // Fresh apiGet mock captured AFTER resetModules — the outer mockedApiGet is stale after reset
   let localMockedApiGet: jest.MockedFunction<typeof import('@/lib/api/client').apiGet>;
+  let localMockedApiPost: jest.MockedFunction<typeof import('@/lib/api/client').apiPost>;
 
   beforeAll(async () => {
     process.env.NEXT_PUBLIC_USE_MOCKS = 'false';
@@ -210,14 +212,16 @@ describe('repository — USE_MOCK=false (NEXT_PUBLIC_USE_MOCKS=false)', () => {
     // Re-mock api/client after module reset
     jest.mock('@/lib/api/client', () => ({
       apiGet: jest.fn(),
+      apiPost: jest.fn(),
     }));
     const mod = await import('../repository');
     triggerCall = mod.triggerCall;
     getCallStatus = mod.getCallStatus;
     getCallLogs = mod.getCallLogs;
     // Capture the FRESH mock instance that repository.ts is using
-    const { apiGet: freshApiGet } = await import('@/lib/api/client');
+    const { apiGet: freshApiGet, apiPost: freshApiPost } = await import('@/lib/api/client');
     localMockedApiGet = freshApiGet as jest.MockedFunction<typeof freshApiGet>;
+    localMockedApiPost = freshApiPost as jest.MockedFunction<typeof freshApiPost>;
   });
 
   afterAll(() => {
@@ -226,42 +230,31 @@ describe('repository — USE_MOCK=false (NEXT_PUBLIC_USE_MOCKS=false)', () => {
   });
 
   beforeEach(() => {
-    // Reset the fresh apiGet mock between tests
+    // Reset the fresh mocks between tests
     localMockedApiGet?.mockReset();
+    localMockedApiPost?.mockReset();
   });
 
   // ── triggerCall — happy path ──────────────────────────────────────────────
 
-  it('triggerCall (real): POSTs to /api/voice/trigger with correct body', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce(
-      fakeResponse(BACKEND_TRIGGER_OK, 200),
-    );
+  it('triggerCall (real): POSTs to /api/comms/calls/trigger with correct body', async () => {
+    localMockedApiPost.mockResolvedValueOnce(BACKEND_TRIGGER_OK);
 
     await triggerCall(BASE_REQUEST);
 
-    // Identify the /api/voice/trigger call (skip fire-and-forget debug logger call)
-    const calls = (global.fetch as jest.Mock).mock.calls as [string, RequestInit][];
-    const triggerCall_ = calls.find(([url]) => String(url).endsWith('/api/voice/trigger'));
-    expect(triggerCall_).toBeDefined();
-
-    const [url, init] = triggerCall_!;
-    expect(url).toBe('/api/voice/trigger');
-    expect(init.method).toBe('POST');
-    expect(init.headers).toMatchObject({ 'Content-Type': 'application/json' });
-
-    const sentBody = JSON.parse(init.body as string) as Record<string, unknown>;
-    expect(sentBody.studentId).toBe('1RV21CS001');
-    expect(sentBody.parentPhone).toBe('+919876543210');
-    expect(sentBody.language).toBe('kn');
-    expect(sentBody.callType).toBe('ABSENT_CALL');
-    // institutionId defaults to 'RVCE' when not provided
-    expect(sentBody.institutionId).toBe('RVCE');
+    expect(localMockedApiPost).toHaveBeenCalledWith(
+      '/api/comms/calls/trigger',
+      {
+        studentUsn: '1RV21CS001',
+        type: 'ABSENT_CALL',
+        language: 'kn',
+        parentPhone: '+919876543210',
+      },
+    );
   });
 
   it('triggerCall (real): happy path — returns callId and status from backend', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce(
-      fakeResponse(BACKEND_TRIGGER_OK, 200),
-    );
+    localMockedApiPost.mockResolvedValueOnce(BACKEND_TRIGGER_OK);
 
     const result = await triggerCall(BASE_REQUEST);
 
@@ -270,86 +263,44 @@ describe('repository — USE_MOCK=false (NEXT_PUBLIC_USE_MOCKS=false)', () => {
     expect(result.message).toBe('Call queued successfully');
   });
 
-  it('triggerCall (real): uses explicit institutionId when provided', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce(
-      fakeResponse(BACKEND_TRIGGER_OK, 200),
-    );
-
-    await triggerCall({ ...BASE_REQUEST, institutionId: 'MSRIT' });
-
-    const calls = (global.fetch as jest.Mock).mock.calls as [string, RequestInit][];
-    const triggerCall_ = calls.find(([url]) => String(url).endsWith('/api/voice/trigger'));
-    const sentBody = JSON.parse(triggerCall_![1].body as string) as Record<string, unknown>;
-    expect(sentBody.institutionId).toBe('MSRIT');
-  });
-
-  it('triggerCall (real): passes studentContext when provided', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce(
-      fakeResponse(BACKEND_TRIGGER_OK, 200),
-    );
-    const ctx = { name: 'Arjun', attendancePct: 68.3 };
-
-    await triggerCall({ ...BASE_REQUEST, studentContext: ctx });
-
-    const calls = (global.fetch as jest.Mock).mock.calls as [string, RequestInit][];
-    const triggerCall_ = calls.find(([url]) => String(url).endsWith('/api/voice/trigger'));
-    const sentBody = JSON.parse(triggerCall_![1].body as string) as Record<string, unknown>;
-    expect(sentBody.studentContext).toStrictEqual(ctx);
-  });
-
   // ── triggerCall — error paths ─────────────────────────────────────────────
 
-  it('triggerCall (real): throws when route returns 400 with error message', async () => {
-    // This is the regression test for the bug-fix: route now validates parentPhone
-    // and returns 400. The repository must surface that error to the caller.
-    global.fetch = jest.fn().mockResolvedValueOnce(
-      fakeResponse({ error: 'parentPhone required' }, 400),
-    );
+  it('triggerCall (real): throws when route returns error message', async () => {
+    localMockedApiPost.mockRejectedValueOnce(new Error('parentPhone required'));
 
     await expect(
       triggerCall({ ...BASE_REQUEST, parentPhone: '' }),
     ).rejects.toThrow('parentPhone required');
   });
 
-  it('triggerCall (real): throws with status code when route returns 400 with no error body', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce(
-      fakeResponse({}, 400),
-    );
+  it('triggerCall (real): throws with fallback when apiPost throws non-Error', async () => {
+    localMockedApiPost.mockRejectedValueOnce('Non-error string failure');
 
     await expect(
       triggerCall({ ...BASE_REQUEST, parentPhone: '' }),
-    ).rejects.toThrow('Voice trigger failed: 400');
+    ).rejects.toThrow('Voice trigger failed');
   });
 
   it('triggerCall (real): throws when route returns 500', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce(
-      fakeResponse({ error: 'Internal Server Error' }, 500),
-    );
+    localMockedApiPost.mockRejectedValueOnce(new Error('Internal Server Error'));
 
     await expect(triggerCall(BASE_REQUEST)).rejects.toThrow('Internal Server Error');
   });
 
   it('triggerCall (real): throws when route returns 502 (voice service down)', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce(
-      fakeResponse({ error: 'Error: fetch failed' }, 502),
-    );
+    localMockedApiPost.mockRejectedValueOnce(new Error('Error: fetch failed'));
 
     await expect(triggerCall(BASE_REQUEST)).rejects.toThrow('Error: fetch failed');
   });
 
-  it('triggerCall (real): throws when the 4xx response body is malformed JSON (non-JSON error body)', async () => {
-    // Backend returns 4xx with HTML body (happens on load-balancer error pages)
-    // .json() rejects → catch(() => ({})) → no error field → fallback message
-    global.fetch = jest.fn().mockResolvedValueOnce(
-      fakeResponseMalformedJson(503),
-    );
+  it('triggerCall (real): throws when the response body is malformed', async () => {
+    localMockedApiPost.mockRejectedValueOnce(new Error('Voice trigger failed: 503'));
 
     await expect(triggerCall(BASE_REQUEST)).rejects.toThrow('Voice trigger failed: 503');
   });
 
   it('triggerCall (real): throws on network failure (fetch rejects entirely)', async () => {
-    // Simulates: no connectivity, DNS failure, ECONNREFUSED
-    global.fetch = jest.fn().mockRejectedValue(new TypeError('fetch failed'));
+    localMockedApiPost.mockRejectedValueOnce(new TypeError('fetch failed'));
 
     await expect(triggerCall(BASE_REQUEST)).rejects.toThrow('fetch failed');
   });
@@ -686,12 +637,19 @@ describe('repository — USE_MOCK=false (NEXT_PUBLIC_USE_MOCKS=false)', () => {
 
 describe('repository — NEXT_PUBLIC_USE_MOCKS absent (defaults to "false")', () => {
   let triggerCall: (req: typeof BASE_REQUEST) => Promise<TriggerCallResult>;
+  let localMockedApiPost: jest.MockedFunction<typeof import('@/lib/api/client').apiPost>;
 
   beforeAll(async () => {
     delete process.env.NEXT_PUBLIC_USE_MOCKS;
     jest.resetModules();
+    jest.mock('@/lib/api/client', () => ({
+      apiGet: jest.fn(),
+      apiPost: jest.fn(),
+    }));
     const mod = await import('../repository');
     triggerCall = mod.triggerCall;
+    const { apiPost: freshApiPost } = await import('@/lib/api/client');
+    localMockedApiPost = freshApiPost as jest.MockedFunction<typeof freshApiPost>;
   });
 
   afterAll(() => {
@@ -699,18 +657,12 @@ describe('repository — NEXT_PUBLIC_USE_MOCKS absent (defaults to "false")', ()
   });
 
   it('defaults to real path (USE_MOCK=false) when NEXT_PUBLIC_USE_MOCKS is not set', async () => {
-    // Default is 'false' per `process.env.NEXT_PUBLIC_USE_MOCKS ?? 'false'`
-    // Real path: fetch('/api/voice/trigger') is called
-    global.fetch = jest.fn().mockResolvedValueOnce(
-      fakeResponse({ callId: 'call-real-abc', status: 'INITIATED' }, 200),
-    );
+    localMockedApiPost.mockResolvedValueOnce({ callId: 'call-real-abc', status: 'INITIATED' });
 
     const result = await triggerCall(BASE_REQUEST);
 
     expect(result.callId).toBe('call-real-abc');
     expect(result.status).toBe('INITIATED');
-    // Verify fetch was called (not the mock path)
-    const calls = (global.fetch as jest.Mock).mock.calls as [string, RequestInit][];
-    expect(calls.some(([url]) => String(url).includes('/api/voice/trigger'))).toBe(true);
+    expect(localMockedApiPost).toHaveBeenCalledWith('/api/comms/calls/trigger', expect.any(Object));
   });
 });
